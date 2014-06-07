@@ -1,0 +1,104 @@
+TaskList Asqare.
+All dates in YYYYMMDD.
+----
+TODO
+----
+Date = when added.
+
+20080706 Bijoux:    Preferences: sound
+20080721 BoucheBee: Fix flood fill for edge case
+20081024 Activity:  Support for themes
+20081024 Themes:    Flower theme (repackage as single bitmap)
+20081024 Themes:    Document themes, provide template PNG
+20081024 GameList:  Need long press on items for delete + play
+20081024 Asqare:    Pref for disabling penalty and finish game
+20081024 BoucheBee: Detect end of game
+20081024 Feature:   Networked backend for social highscores (long term, use GAE)
+
+
+----
+DONE
+----
+Date = when completed.
+
+20080726 Activity:  Larger list item text, try to center list icon
+20080726 Activity:  Fixed Prefs & About activities
+20080724 Activity:  Fixed db closed before query
+20080724 Activity:  Updated api.  
+20080721 Activity:  Use resource gameplay title in showNewGame list
+20080721 BoucheBee: Implemented most of gameplay
+20080721 Activity:  Fixed startup of multiple gameplays, removed gameplay.restart
+20080720 BoucheBee: Skeleton for BoucheBee
+20080720 Activity:  GameList+Provider, create new game, one of available games  
+20080718 Activity:  Moving files around in sub-packages
+20080716 Activity:  GameList, confirmation dialog for delete game
+20080716 Activity:  GameList, fix focus next up/down, margins
+20080716 Activity:  GameList, implement delete game, add to options menu
+20080716 Activity:  Prefs, try to display blurred previous activity as background
+20080716 Activity:  GameList, short text for created/modified timestamps
+20080716 Activity:  GameList, margins in layout
+20080715 Activity:  GameList, fix layout to display game preview
+20080714 Activity:  Gameplay, ability to create game previews
+20080714 Activity:  GameList, layout to display game preview
+20080713 Activity:  Fixed restart for existing games
+20080713 Activity:  Gameplay activity to insert/edit games
+20080713 Activity:  GameList Activity as entry point
+20080713 Activity:  GameList Activity
+20080712 Activity:  Fix GameList provider
+20080711 Activity:  GameList provider for game list db
+20080710 Activity:	Save/restore last game in db
+20080710 Engine:	Rewrote save/restore using string serialization + db helper
+20080709 Activity:  Fixed button layout landscape+portrait
+20080709 Activity:  Save last game to db (experimental)
+20080707 Activity:  Button layer (experimental)
+20080706 Bijoux:    Preferences: vibrate
+20080706 Bijoux:    Preferences: play intro, play anims
+20080706 Activity:  Icons for prefs / about
+20080620 Activity:  Preferences (generic)
+20080610 Bug:       Left-most adjacent cell not removed
+20080610 Bug:       Activity restore displays nothing in Bijoux
+20080608 Bijoux:    Support for save/restore state
+20080607 Activity:  Support for pause/restart
+20080607 Engine:    BaseThread.pause returns only once paused
+20080607 Engine:    Make ActionThread abstract
+20080606 Engine:    Remove usage of Context.ActionThread, switch all to AnimThread
+20080606 Bijoux:    Use 6-7 colors and split amongst shapes 
+20080606 Bijoux:    Change scoring to area sum
+20080605 Activity:  Switch to GL rendering
+20080605 Engine:    Cache sprites in bitmpas
+20080605 Bijoux:    Add move penalty to scores
+20080602 Activity:  Activity cycle design.
+20080602 Activity:  Support for screen orientation change (landscape layout)
+20080602 Bug:       Fix last missing redraw
+20080601 Engine:    BaseThread, merge action thread in anim thread
+20080601 Engine:    AnimThread version 2, design + impl., use in Bijoux
+
+20080531 Engine:    Fly-over animation + support in view, lost of redraw issues
+20080531 Bug:       Try to fix last missing redraw, action/anim combo is broken
+20080529 Bijoux:    Fill new empty cells
+20080528 Bijoux:    Remove adjacent, fill algo w/ custom stack
+20080527 Activity:  Options Menu
+20080526 Bijoux:    Remove adjacent cells, basic implementation (fill algo)
+20080526 Engine:    Shrink animation
+
+20080525 Bijoux:    Selected > Swap
+20080525 Bijoux:    Selection second-state
+20080525 Bijoux:    Selection first-state
+20080525 Engine:    Blinking animation
+20080525 Engine:    AnimThread
+20080525 Bug:       Gameplay switch doesn't render correctly
+
+20080524 Engine:    Remove old ActionThread, use new one
+20080524 Bijoux:    Find better name. It's a losely-related clone.
+20080524 Engine:    ActionThread2
+20080524 Doc:       Design notes for new action thread & animation thread
+20080524 Bijoux:    Selected > Swap
+
+20080523 Bijoux:    Selection second-state
+20080523 Bijoux:    Selection first-state
+20080523 Engine:    Blinking cell
+20080523 Bijoux:    Init board w/ background and selection
+20080523 Bijoux:    Init sprites for the various shapes/colors
+
+20080522 Bejeweled: Design notes for bejeweled clone gameplay
+20080522 Doc:       Update design notes

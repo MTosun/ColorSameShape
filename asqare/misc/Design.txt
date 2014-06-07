@@ -1,0 +1,269 @@
+----
+20080419 Asqare design notes
+
+Goal: a simple board game with a variety of gameplays.
+Things like tetris or bejeweled.
+
+Implementation:
+- display for a board with NxM square slots
+- each board slot:
+	- can be empty
+	- or contain one game "token"
+- token = 1 shape + 1 color
+
+Two strategies:
+- each time a board slot is affected, a new token is created. The new token
+  encodes its position. In this case the token is more like a game token that
+  gets moved around.
+- there's a fixed set of tokens around with each a different shape and color.
+  Those are affected to each board slot not based on their board position but
+  based on their physical characteristics.
+
+In the first strategy, it's easy to use the tokens as part of game play engine,
+i.e. the board is the model. In the later case, the engine must keep its own
+state. The former case makes it possible to affect individual characteristics
+to each token such as a custom in-out animation or selection effect.
+
+We'll use the first strategy. If a gameplay wants to avoid allocations, it
+can always create a pool of reusable tokens.
+
+----
+20080522 Updated design
+
+Actual design changed since initial notes.
+Classes:
+- Gameplay, base class for game logics, one per game.
+- Gameplay contains a Board<Cell> array.
+- Each gameplay can either use the default Cell class or override it store its
+  own data.
+- Each cell contains a background Sprite and a foreground Sprite.
+- The board contains a default background Sprite (overriden by the cell's one).
+- Sprite, the base class for Sprites. Sprites are stateless, they just know how 
+  to draw themselves in the rectangles they are given. Sprites have a default 
+  color.
+
+Gameplays can choose between many strategies.
+
+The default intended strategy is to store all the gameplay state in each cell
+and keep the sprites as stateless entities just responsible for drawing.
+
+In this case the gameplay only needs as many instances of sprites as there are 
+different shapes to draw. Typically there would be one class of sprite per shape 
+and each sprite instance has a different color.
+
+----
+20080522 Bejeweled gameplay
+
+A simple small board of 6x7 cells.
+There are 2 or 3 sprite shapes and maybe 5 or 6 colors total.
+
+The gameplay initializes a list of sprite for the various shapes/colors
+once and for all.
+
+Two background sprites are needed: the default background and the first-
+selection background. The default background is set on the board.
+
+Initially sprites are added to all cells randomly.
+
+Selection has 3 states: none, 1 selection, 2 selection pending.
+Workflow:
+- Nothing is selected. A selected cell is marked with the selection background.
+- One cell is selected.
+	- If the new selection is adjacent:
+		- If new cell has same sprite as first-selection, it's a match, see below.
+		- If not, reset first-selection.
+	- If the new selection is not adjacent, ignore.
+- Disable selection during multi-animation cycles (i.e, the whole of below)
+
+When the 2 selections match, swap the 2 items w/ animation.
+
+Once the animation is finished, look at the adjacent selected cells. Count how 
+many of the same sprite in H and V. If >= 3 in any direction (H, V), remove w/ 
+animation
+
+Once some sprites have been removed, make upper sprites fall w/ animation.
+Then fill from top w/ animation too.
+
+----
+20080524 Animations
+
+The current animation model is based on ActionThread which executes
+a queue of runnables at the given timestamp.
+
+This fails on several level. For starter, it implies a lot of allocations just 
+to run the runnables. And it doesn't solve the issue of animating which should 
+rather be FPS based than timestamp based. 
+
+So we need two things.
+
+ActionThread is going to hold a queue of pending commands to execute.
+This should be a circular buffer.
+
+Commands are:
+- wait till a given time
+- set sprite for a cell / invalidate
+- set visibility for a cell / invalidate
+- call back a gameplay with an event id (to perform a state machine)
+
+
+AnimationThread updates cells based on a list of pending animations.
+
+Animations are going to simply be linear interpolations or linear movements,
+performed in their own thread at a given fps.
+
+The base idea is that a given cell has a sprite, but that sprite will be 
+displayed at another position, based on an offset. The gameplay should give the 
+offset in cell coordinates and the length of the animation. Some animations 
+never ends unless they are canceled.
+
+Since the number of cells is rather small, rather than maintain a dynamic list 
+of pending animation, we just need to iterate to see if any cell needs to be 
+animated. 
+
+For each cell that has a pending animation offset, compute the next offset and 
+invalidate both the old and new "virtual" cells. When the animation time 
+expires, simply remove the animation offset.
+
+The blinking effect, which is currently implemented in the view draw code, is
+better implemented as an animation that toggles the visibility on and off or
+that toggles the position out of the screen.
+
+----
+20080601 Animation Thread
+
+I need to rework the animation thread and merge the action thread with it.
+In the current model, animations can occur at different frequencies.
+This makes it tedious to synchronize the display because several animated
+objects request a redraw at very slightly different times, when they could
+all be animated and redrawn at once.
+
+Currently the main animation thread loop runs whenever there's a "next event",
+whenever that is. 
+The simple change is to change this to a pure fixed frame-per-seconds rate.
+At each frame, compute all animations and then redraw everything that changed
+all at once.
+
+The action thread was a neat idea and it works relatively well, but 
+unfortunately many times I need to run an action when all animations have
+finished. Basically the animation thread should have its only list of
+actions and execute them when there's no pending animations left or none of
+a given kind.
+ 
+----
+20080602 Activity Cycle
+
+Before I can handle the activity cycle, I need to remove the spurious 
+ActionThread since it's only used by the title gameplay. Instead, use the one 
+merged with AnimThread. Make ActionThread abstract by removing its run method.
+
+In BaseThread, the pause method needs to change: if the thread is already 
+paused, it does nothing. If it's not, it must set the pause boolean as of right 
+now but it must also wait for the thread to be in the pause-wait state. A 
+barrier is needed. BaseThread.pause must only return once it is known that the 
+thread is not processing anything.
+
+Now, as far as the activity pausing is concerned, the activity pauses the 
+current gameplay and *then* the anim thread. The last one is spurious in the 
+sense that if a gameplay uses the anim thread, it *must* pause it itself.
+
+When the Gameplay.pause is invoked, implementations must first pause the anim 
+thread. We know this will return only once the thread is actually paused. Since 
+all the gameplay is handled via the anim thread callbacks, we now know that the 
+gameplay is in a stable state.
+
+The gameplay must then stop any pending animation on the board, simply by 
+iterating on the cells and calling AnimThread.stopAnim. This removes all 
+animation and puts the cells in a stable state, so that it can be saved. 
+
+The action queue list needs not be purged -- the wait events will expire by 
+themselves whilst the gameplay or set-sprite events will be used when the 
+activity is resumed.
+
+The gameplay must now serialize the action queue list, as well as the 
+board/cells state and of course its own inner state, if it is not all encoded in 
+the board (it should.)
+
+The only issue is serializing the sprites for the cells (and actions), some kind 
+of name or id should be used. Thus we need a minimal sprite factory.
+
+There are two kinds of resumes: a "cold start" where everything is re-created 
+and then the resume following a paused state.
+
+The "un-pause" resume is simple: simply un-pause the anim thread, and everything 
+should happen again.
+
+For the cold start, we must first instantiate a new gameplay so that it can 
+rebuild its inner structures -- a board with the same size must be created, then 
+the sprites must be created, then the board cells must be deserialized and the 
+sprites reassigned. The board must be set in the context. The action queue must 
+be deserialized. Finally the anim thread can be un-paused.
+
+One particular mention is that after a cold restart, the board must have the 
+same geometry but the actually cell size in pixels in the view can change.
+
+----
+20080607 Activity Lifeycycle Summary
+
+- onCreate
+- [onRestart]
+- onStart
+- onResume
+- onSaveInstanceState (state for onCreate)
+- onPause => loop to onResume
+- onStop => loop to onRestart
+- onDestroy
+
+	
+How to use this?
+
+On the stopping side:
+
+- onSaveInstanceState: need to serialize the state of the gameplay, board and 
+pending actions. Ignore the pending animations. This must be done with the anim 
+thread paused, serialize, then unpause.
+  
+- onCreate: deserialize the state if any. That is, create the anim thread, setup 
+the views. If there's no state, start the default activity. If there is state, 
+create the corresponding activity and let it setup itself with its board, 
+restore the actions and sprites. AnimThread is not started yet.
+
+- onRestart: nothing.
+
+- onStart: start anim thread (ignored if already started)
+
+- onResume: unpause gameplay + anim thread (ignored if not paused)
+
+- onPause: pause gameplay then anim thread
+
+- onStop: nothing. We don't actually stop the anim thread nor the gameplay,
+they just stay paused.
+
+- onDestroy: gracefully stop gameplay & anim thread without saving.
+
+----
+20080710 Saving games
+
+Goal: Auto-save games in the activity's database.
+- Each new game gets a new id, with a new db record
+- Db fields: game type (gameplay class name), current score, timestamp started,
+  timestamp last used, current restorable state.
+
+3 entry points:
+- title -> new game
+- title -> restore current/last game (i.e. most recent used)
+- pick an existing game from the list of all saved games
+
+Workflow:
+- create new gameplay of desired class
+- restore from { id, created timestamp, state }
+	- if id is null, db.save => new id 
+- activity.onSaveState -> gameplay.saveState + db.update (by id)
+
+In gameplay: serialize to string (TEXT record in db) for state.
+When bundling, simply store that string.
+
+Create class DbHelper, available by context:
+- openOrCreateDb (creates table first time)
+- record: class name, created_ts, mod_ts, state string 
+- get most recent => record
+- update <= record => record (creates id + ts if not set yet)
